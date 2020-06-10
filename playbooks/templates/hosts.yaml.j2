@@ -1,0 +1,32 @@
+# Generated ! Do not edit unless you know what you do :) 
+all:
+  hosts:
+{% for server in servers %}
+    {{server.name}}.mshome.net:
+{% if "etcd" in server.roles %}      etcd_member_name: {{server.name}}
+{% endif %}
+      ip: 10.233.1.{{ loop.index + 2 }} 
+{% endfor %} 
+  vars:
+    ansible_connection: ssh
+  children:   # key order does not matter, indentation does
+    k8s-cluster:
+      children:
+        etcd:
+          hosts:
+{% for server in servers %}
+{% if "etcd" in server.roles%}            {{server.name}}.mshome.net:
+{%endif%}
+{%endfor%}
+        kube-master:
+          hosts:
+{% for server in servers %}
+{% if "master" in server.roles%}            {{server.name}}.mshome.net:
+{%endif%}
+{%endfor%}
+        kube-node:
+          hosts:
+{% for server in servers %}
+{% if "node" in server.roles%}            {{server.name}}.mshome.net:
+{%endif%}
+{%endfor%}

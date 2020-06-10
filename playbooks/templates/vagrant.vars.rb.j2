@@ -1,0 +1,5 @@
+# Generated ! Do not edit unless you know what you do :) 
+HOSTS = {
+{% for servers in servers %}    '{{ servers.name }}' => ['0200000000{{ '0' if loop.index < 10 }}{{ loop.index }}', {{ servers.cpu }}, {{ servers.memMin }}, {{ servers.memMax }}, '{{ servers.vagrantBox }}', '0600000000{{ '0' if loop.index < 10 }}{{ loop.index }}' ],
+{% endfor %}
+}

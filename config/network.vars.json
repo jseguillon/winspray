@@ -1,0 +1,5 @@
+{
+    "nodes_netplan_netmask": "24",
+    "nodes_icfg_netmask": "255.255.255.0",
+    "nodes_default_gateway": "10.233.1.1"
+}

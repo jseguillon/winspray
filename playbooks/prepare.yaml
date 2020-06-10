@@ -1,0 +1,88 @@
+# First : bootstrap with the help of kubespray role
+# We then can get os family and act to config ips
+- hosts: k8s-cluster:etcd:calico-rr
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  gather_facts: false
+  vars:
+    # Need to disable pipelining for bootstrap-os as some systems have requiretty in sudoers set, which makes pipelining
+    # fail. bootstrap-os fixes this on these systems, so in later plays it can be enabled.
+    ansible_ssh_pipelining: false
+  roles:
+    - { role: kubespray-defaults}
+    - { role: bootstrap-os, tags: bootstrap-os}
+
+# Now we have family, we can configure control plane interface with static ip
+- hosts: k8s-cluster:etcd:calico-rr
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  gather_facts: true
+  vars:
+    ansible_ssh_pipelining: true
+  tasks:
+  - name: Centos | set ip {{ ip }} on eth1
+    copy:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      content: |
+            DEVICE="eth1"
+            BOOTPROTO="static"
+            ONBOOT="yes"
+            TYPE="Ethernet"
+            IPADDR={{ ip }}
+            # GATEWAY={{ nodes_default_gateway }}
+            NETMASK={{ nodes_icfg_netmask }}
+    when: ansible_os_family == 'RedHat'
+  - name: Centos | ifup eth1
+    shell:
+      cmd: ifup eth1
+    when: ansible_os_family == 'RedHat'
+    
+  - name: Ubuntu/Debian remove old leases
+    shell: rm -f /var/lib/NetworkManager/*.lease
+    when: ansible_distribution == 'Ubuntu'
+  - name: Ubuntu | force netplan adding ip on eth1
+    copy:
+      dest: /etc/netplan/01-netcfg.yaml
+      content: |
+              network:
+                version: 2
+                renderer: networkd
+                ethernets:
+                  eth0:
+                    dhcp4: true
+                    dhcp6: false
+                    optional: true
+                    #nameservers:
+                    #  addresses: [8.8.8.8, 7.7.7.7]
+                  eth1:
+                    dhcp4: false
+                    dhcp6: false
+                    optional: true
+                    addresses: [{{ ip }}/{{ nodes_netplan_netmask }}]
+    when: ansible_distribution == 'Ubuntu'
+  - name: Ubuntu/Debian | netplan apply
+    shell:
+      cmd: netplan apply
+    when: ansible_distribution == 'Ubuntu'
+  - name: "Ubuntu : mitigate https://askubuntu.com/questions/973017/wrong-nameserver-set-by-resolvconf-and-networkmanager/974482#974482" 
+    shell: "sudo rm -f /etc/resolv.conf && sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf"
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Debian | set ip 
+    blockinfile:
+      dest: /etc/network/interfaces
+      content: |
+               auto eth1
+               iface eth1 inet static
+               address {{ ip }}     
+               netmask 255.255.255.0
+               
+    when: ansible_distribution == 'Debian'
+
+  - name: now reboot all 
+    reboot:
+    
+  - name: check internet access still OK
+    uri:
+      url: https://github.com
+    tags:
+      - check_internet
+

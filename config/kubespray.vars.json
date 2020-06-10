@@ -1,0 +1,11 @@
+{
+    "download_run_once": true,
+    "metrics_server_enabled": true,
+    "dashboard_enabled": true,
+    "ingress_nginx_enabled": true,
+    "override_system_hostname": false,
+    "docker_version": "19.03",
+    "download_localhost": true,
+    "download_cache_dir": "/opt/winspray/kubespray_cache",
+    "kube_version": "v1.18.2"
+  }
