@@ -32,11 +32,25 @@ git submodule update --init
 
 ## Import module
 
+Authorize bad things 
+
+```powershell
+Set-ExecutionPolicy RemoteSigned 
+```
+
+Then import
+
 ```powershell
 Import-Module .\winspray.psm1 -Force
 ```
 
 # Use it 
+
+## Choose your infra 
+
+Look at `samples/` dir. Choose your infrastrucute or create one. Be sure you have an odd number of etcd servers.
+
+So far, supported vagrant boxes are "generic/centos8" and "generic/debian10"  
 
 ## New cluster 
 
