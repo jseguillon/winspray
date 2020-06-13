@@ -41,7 +41,7 @@ Set-ExecutionPolicy RemoteSigned
 Then import
 
 ```powershell
-Import-Module .\winspray.psm1 -Force
+Import-Module .\module\winspray.psm1 -Force
 ```
 
 # Use it 
