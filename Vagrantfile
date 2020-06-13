@@ -49,7 +49,7 @@ SHELL
 
       # Add second interface for kubernetes control plane 
       machine.trigger.after :up do |trigger|
-        trigger.run = {privileged: "true", powershell_elevated_interactive: "true", path: "./addItfIfNotExists.ps1", args: ["-vmName", name, "-macAddrCtrlPlane", secondMac]}
+        trigger.run = {privileged: "true", powershell_elevated_interactive: "true", path: "module/winsprayAddItf.ps1", args: ["-vmName", name, "-macAddrCtrlPlane", secondMac]}
       end
 
       machine.vm.provider "hyperv" do |hv|
