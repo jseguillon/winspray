@@ -67,7 +67,7 @@ function Prepare-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/prepare.yaml " )
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock"  -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/playbooks/prepare.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'
+    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/playbooks/prepare.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
@@ -79,7 +79,7 @@ function Install-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
-    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
+    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
