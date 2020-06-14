@@ -1,12 +1,10 @@
-k8s-server-1:
-  roles: 
-    - etcd
-    - master
-    - node
-  cpu: 2
-  memMin: 2048
-  memMax: 4096
-  vagrantBox: "generic/centos8"
-# => rb : MAC, mem, OS no dups !  => easier with second version 
-# => ansible: all with internal IPs + var connection but no dups !  = ssh  => since ok for python parse/transform => use easiest version for ruby (no dedups)
-# => dump in current/ dir for usefull workflow test
+servers:
+  - name : k8s-server-1
+    roles: 
+      - etcd
+      - master
+      - node
+    cpu: 2
+    memMin: 2048
+    memMax: 4096
+    vagrantBox: "generic/ubuntu2004"
