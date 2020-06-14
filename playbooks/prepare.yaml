@@ -3,6 +3,7 @@
 - hosts: k8s-cluster:etcd:calico-rr
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   gather_facts: false
+  strategy: linear
   vars:
     # Need to disable pipelining for bootstrap-os as some systems have requiretty in sudoers set, which makes pipelining
     # fail. bootstrap-os fixes this on these systems, so in later plays it can be enabled.
@@ -15,6 +16,7 @@
 - hosts: k8s-cluster:etcd:calico-rr
   any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
   gather_facts: true
+  strategy: linear
   vars:
     ansible_ssh_pipelining: true
   tasks:
@@ -34,24 +36,23 @@
     shell:
       cmd: ifup eth1
     when: ansible_os_family == 'RedHat'
-    
+
   - name: Ubuntu/Debian remove old leases
     shell: rm -f /var/lib/NetworkManager/*.lease
     when: ansible_distribution == 'Ubuntu'
+  
+  - name: "Ubuntu : mitigate https://askubuntu.com/questions/973017/wrong-nameserver-set-by-resolvconf-and-networkmanager/974482#974482" 
+    shell: "sudo rm -f /etc/resolv.conf && sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf"
+    when: ansible_distribution == 'Ubuntu'
+
   - name: Ubuntu | force netplan adding ip on eth1
     copy:
-      dest: /etc/netplan/01-netcfg.yaml
+      dest: /etc/netplan/02-ctrplane.yaml
       content: |
               network:
                 version: 2
                 renderer: networkd
                 ethernets:
-                  eth0:
-                    dhcp4: true
-                    dhcp6: false
-                    optional: true
-                    #nameservers:
-                    #  addresses: [8.8.8.8, 7.7.7.7]
                   eth1:
                     dhcp4: false
                     dhcp6: false
@@ -62,9 +63,8 @@
     shell:
       cmd: netplan apply
     when: ansible_distribution == 'Ubuntu'
-  - name: "Ubuntu : mitigate https://askubuntu.com/questions/973017/wrong-nameserver-set-by-resolvconf-and-networkmanager/974482#974482" 
-    shell: "sudo rm -f /etc/resolv.conf && sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf"
-    when: ansible_distribution == 'Ubuntu'
+    async: 30
+    poll: 0
     
   - name: Debian | set ip 
     blockinfile:
@@ -77,6 +77,17 @@
                
     when: ansible_distribution == 'Debian'
 
+- hosts: localhost
+  tasks:
+  - name: Clear gathered facts from all currently targeted hosts
+    meta: clear_facts 
+
+- hosts: k8s-cluster:etcd:calico-rr
+  any_errors_fatal: "{{ any_errors_fatal | default(true) }}"
+  gather_facts: true
+  vars:
+    ansible_ssh_pipelining: true
+  tasks:
   - name: now reboot all 
     reboot:
     
