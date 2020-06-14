@@ -5,6 +5,7 @@
 
 $script:PSModule = $ExecutionContext.SessionState.Module
 $script:PSModuleRoot = $script:PSModule.ModuleBase
+$script:kubesprayVersion = "2.13.1"
 
 function Remove-Winspray-Cluster {
     Write-Host ( "# Winspray - destroying current VMs")
@@ -67,7 +68,7 @@ function Prepare-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/prepare.yaml " )
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/playbooks/prepare.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
+    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
@@ -79,7 +80,7 @@ function Install-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
-    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
+    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
@@ -92,7 +93,7 @@ function Do-Winspray-Bash( ) {
     Write-Host ( "   ansible-playbook --network host --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json'  -e '@/opt/winspray/config/authent.vars.json'" )
     Write-Host ( "" )
 
-    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash
+    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash
     
     if (!$?) { throw "Exiting $?" }
 }
@@ -135,7 +136,7 @@ function New-Winspray-Inventory ( ) {
     if (!$?) {  throw ( "** ERROR *** could not find  ./samples/$KubernetesInfra.yml or could not copy it to 'current/' " ) }
 
     # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/winspray/playbooks/inventory_create.yaml
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/winspray/playbooks/inventory_create.yaml
     if (!$?) {  throw ( "** ERROR *** Found error while creating inventory" ) }
 
     Copy-Item ./samples/group_vars -Destination current/ -Recurse
