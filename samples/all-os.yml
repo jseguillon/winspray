@@ -1,0 +1,24 @@
+servers:
+  - name: k8s-server-1
+    roles: 
+      - etcd
+      - master
+      - node
+    cpu: 2
+    memMin: 2048
+    memMax: 4096
+    vagrantBox: "generic/centos8"
+  - name: k8s-server-2
+    roles: 
+      - node
+    cpu: 2
+    memMin: 2048
+    memMax: 4096
+    vagrantBox: "generic/debian10"  
+  - name: k8s-server-3
+    roles: 
+      - node
+    cpu: 2
+    memMin: 2048
+    memMax: 4096
+    vagrantBox: "generic/ubuntu1910"  

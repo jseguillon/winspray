@@ -50,7 +50,7 @@ Import-Module .\module\winspray.psm1 -Force
 
 Look at `samples/` dir. Choose your infrastrucute or create one. Be sure you have an odd number of etcd servers.
 
-So far, supported vagrant boxes are "generic/centos8" and "generic/debian10"  
+So far, knwon working vagrant boxes are "generic/centos8", "generic/debian10"  and "generic/ubuntu1910"
 
 ## New cluster 
 
