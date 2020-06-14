@@ -165,6 +165,16 @@ function New-Winspray-Cluster () {
         if(!$?) { throw ("** ERROR *** could not create  $pwd/current/ directory. $ret" ) }
     }
 
+    if ( ! [System.IO.File]::Exists("$pwd\Vagrantfile" ) ) {
+        Write-Verbose ( "### Winspray - create Vagrantfile" )
+        Copy-Item $script:PSModuleRoot/Vagrantfile .
+    }
+    
+    if ( ! [System.IO.Directory]::Exists("$pwd\config" ) ) {
+        Write-Verbose ( "### Winspray - create Vagrantfile" )
+        Copy-Item $script:PSModuleRoot/config . -Recurse 
+    }
+    
     # Existing vagrant config file and Force flag ? : ok to destroy if we got new target
     if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") -and (! $ContinueExisting ) ) {
         if ( $Force ) {
@@ -182,7 +192,12 @@ function New-Winspray-Cluster () {
 
         Write-Host ("# Winspray - create new VMs" )
         Write-Verbose ( "### Winspray - launching vagrant up" )
+        
+        # Export root module path so vagrant can call script 
+        $env:WINSPRAYROOT=$script:PSModuleRoot
+
         vagrant up
+
         if (!$?) { throw "Exiting $?"; }
         Write-Host ( "## Winspray - VMs created ok `n" ) -ForegroundColor DarkGreen
     }
