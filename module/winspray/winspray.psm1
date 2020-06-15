@@ -90,7 +90,7 @@ function Do-Winspray-Bash( ) {
     Write-Host ( "" )
     Write-Host ( "** Going to bash. Here are usefull commands : " )
     Write-Host ( "   pip install -r /opt/winspray/kubespray/requirements.txt" )
-    Write-Host ( "   ansible-playbook --network host --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json'  -e '@/opt/winspray/config/authent.vars.json'" )
+    Write-Host ( "   ansible-playbook --network host --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json'  -e '@/opt/winspray/config/authent.vars.json'" )
     Write-Host ( "" )
 
     docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash
@@ -123,6 +123,13 @@ function Test-Winspray-Env {
     Write-Host ( "## Winspray - check ok `n" ) -ForegroundColor DarkGreen
 }
 
+function New-Winspray-Config () {
+    if ( ! [System.IO.Directory]::Exists("$pwd\config" ) ) {
+        Write-Verbose ( "### Winspray - create Vagrantfile" )
+        Copy-Item $script:PSModuleRoot/config . -Recurse 
+    }
+}
+
 function New-Winspray-Inventory ( ) {
     [CmdletBinding()]
     Param(
@@ -136,7 +143,7 @@ function New-Winspray-Inventory ( ) {
     if (!$?) {  throw ( "** ERROR *** could not find  ./samples/$KubernetesInfra.yml or could not copy it to 'current/' " ) }
 
     # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/winspray/playbooks/inventory_create.yaml
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /winspray/playbooks/inventory_create.yaml
     if (!$?) {  throw ( "** ERROR *** Found error while creating inventory" ) }
 
     Copy-Item ./samples/group_vars -Destination current/ -Recurse
@@ -171,10 +178,7 @@ function New-Winspray-Cluster () {
         Copy-Item $script:PSModuleRoot/Vagrantfile .
     }
     
-    if ( ! [System.IO.Directory]::Exists("$pwd\config" ) ) {
-        Write-Verbose ( "### Winspray - create Vagrantfile" )
-        Copy-Item $script:PSModuleRoot/config . -Recurse 
-    }
+    New-Winspray-Config
     
     # Existing vagrant config file and Force flag ? : ok to destroy if we got new target
     if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") -and (! $ContinueExisting ) ) {
