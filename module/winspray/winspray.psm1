@@ -1,6 +1,4 @@
 #TODO : validate config against JSON Schema
-#TODO : ensure possible envs&group_vars outside of samples
-#TDOO : no localmount but current dir for pure docker image runtime (no additional archive for module nor git)
 #TODO : few synopsys
 
 $script:PSModule = $ExecutionContext.SessionState.Module
@@ -9,17 +7,19 @@ $script:kubesprayVersion = "2.13.1"
 
 function Remove-Winspray-Cluster {
     Write-Host ( "# Winspray - destroying current VMs")
-
-    Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
-    vagrant destroy -f
-
-    if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force
-    $targetDir = "old-{0}" -f (Get-Date -Format "MM-dd-yyyy-HH-mm")
     
-    Write-Verbose( "### Winspray - Moving current to $targetDir" )    
-    Get-ChildItem -Path "$pwd/current" -Recurse |  Move-Item -Destination "$targetDir" -Force
-
-    Write-Host ( "## Winspray - destroy done `n" ) -ForegroundColor DarkGreen
+    if ( [System.IO.Directory]::Exists("$pwd\current") ) {
+        Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
+        vagrant destroy -f
+        if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force and deal wit h this
+        $targetDir = "old-{0}" -f (Get-Date -Format "MM-dd-yyyy-HH-mm")
+        Write-Verbose( "### Winspray - Moving current to $targetDir" )    
+        Get-ChildItem -Path "$pwd/current" -Recurse |  Move-Item -Destination "$targetDir" -Force
+        Write-Host ( "## Winspray - destroy done `n" ) -ForegroundColor DarkGreen
+    }
+    else { 
+        Write-Host ( "## Winspray - nothing to destroy done. Remove VMs manually if needed `n" ) 
+    }
 }
 
 function Backup-Winspray-Cluster {
@@ -68,7 +68,8 @@ function Prepare-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/prepare.yaml " )
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
+    # TODO : if existing docker/playbooks => use local
+    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook -vvv --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/current/config/kubespray.vars.json'  -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
@@ -80,7 +81,8 @@ function Install-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
-    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/opt/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
+    # TODO : if existing kubespray => use local
+    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/current/config/kubespray.vars.json' -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
@@ -123,13 +125,6 @@ function Test-Winspray-Env {
     Write-Host ( "## Winspray - check ok `n" ) -ForegroundColor DarkGreen
 }
 
-function New-Winspray-Config () {
-    if ( ! [System.IO.Directory]::Exists("$pwd\config" ) ) {
-        Write-Verbose ( "### Winspray - create Vagrantfile" )
-        Copy-Item $script:PSModuleRoot/config . -Recurse 
-    }
-}
-
 function New-Winspray-Inventory ( ) {
     [CmdletBinding()]
     Param(
@@ -138,15 +133,13 @@ function New-Winspray-Inventory ( ) {
     )
 
     Write-Host ("# Winspray - create kubespray inventory and vagant config" )
-
-    copy  ./samples/$KubernetesInfra.yml current/infra.yaml
-    if (!$?) {  throw ( "** ERROR *** could not find  ./samples/$KubernetesInfra.yml or could not copy it to 'current/' " ) }
+    $FileName = (Get-Item $KubernetesInfra).Name
+    if ( ! [System.IO.File]::Exists("$pwd/$FileName") ) {  throw ( "** ERROR *** could not find infra file '$KubernetesInfra' in current '$pwd' path. Please ensure you launch Winspray commands in same path than infra file" ) }
 
     # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /winspray/playbooks/inventory_create.yaml
+    # TODO : if existing docker/playbooks => use local
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /winspray/playbooks/inventory_create.yaml -e "infra=$KubernetesInfra"
     if (!$?) {  throw ( "** ERROR *** Found error while creating inventory" ) }
-
-    Copy-Item ./samples/group_vars -Destination current/ -Recurse
 
     Write-Host ( "## Winspray - inventory and vagrant config created `n") -ForegroundColor DarkGreen
 }
@@ -165,23 +158,11 @@ function New-Winspray-Cluster () {
     # FIXME debug
     [bool]$ContinueExisting = ( $PSBoundParameters.ContainsKey( 'ContinueExisting' ) )
     [bool]$Force = ( $PSBoundParameters.ContainsKey( 'Force' ) )
-    Test-Winspray-Env
-    
-    if ( ! [System.IO.Directory]::Exists("$pwd\current") ) {
-        Write-Verbose ( "### Winspray - create 'current' dir" )
-        $ret = mkdir $pwd/current/ | Out-Null
-        if(!$?) { throw ("** ERROR *** could not create  $pwd/current/ directory. $ret" ) }
-    }
 
-    if ( ! [System.IO.File]::Exists("$pwd\Vagrantfile" ) ) {
-        Write-Verbose ( "### Winspray - create Vagrantfile" )
-        Copy-Item $script:PSModuleRoot/Vagrantfile .
-    }
-    
-    New-Winspray-Config
-    
-    # Existing vagrant config file and Force flag ? : ok to destroy if we got new target
-    if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") -and (! $ContinueExisting ) ) {
+    Test-Winspray-Env
+
+    # Existing current ? : ok to destroy if we got new target
+    if ( [System.IO.Directory]::Exists("$pwd\current") -and (! $ContinueExisting ) ) {
         if ( $Force ) {
             Remove-Winspray-Cluster
         }
@@ -238,4 +219,4 @@ function New-Winspray-Cluster () {
     Write-Host ("# Winspray - Time to start  {0}h {1}m {2}s" -f  ($timeExec.Hours, $timeExec.Minutes, $timeExec.Seconds ))
 }
 
-Export-ModuleMember -Function New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, Do-Winspray-Bash, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime, Do-Winspray-Bash
+Export-ModuleMember -Function Set-Winspray-Config, New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, New-Winspray-Inventory, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime, Do-Winspray-Bash

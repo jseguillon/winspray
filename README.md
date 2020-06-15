@@ -1,10 +1,12 @@
 # What ? 
 
-Winspray is set of functions made to ease Kubernetes multi-node and multi OS deployement on Hyperv via Vagrant and Kubespray
+Winspray is set of functions made to ease Kubernetes multi-node and multi OS deployement on Hyperv via Vagrant and Kubespray. 
 
-Uses Powershell + Docker to manage the VMs
+Goal : 
+ - run kubespray with no effort on HyperV
+ - easy & dynamic config
 
-More details to come 
+So far, knwon working vagrant boxes are "generic/centos8", "generic/debian10"  and "generic/ubuntu1910"
 
 # Requirements
 
@@ -20,6 +22,10 @@ Docker Destkop => https://hub.docker.com/editions/community/docker-ce-desktop-wi
 
 Git => https://git-scm.com/download/win
 
+## Windows 10 network requirements
+
+Ensure you're not connected into any kind of VPN or you'll probably get into troubles.
+
 # Get ready 
 
 ## Clone and update modules 
@@ -32,32 +38,24 @@ git submodule update --init
 
 ## Import module
 
-Authorize bad things 
+Import from [Powershell Gallery](https://www.powershellgallery.com/packages/winspray/) : 
 
 ```powershell
-Set-ExecutionPolicy RemoteSigned 
-```
-
-Then import
-
-```powershell
-Import-Module .\module\winspray.psm1 -Force
+Install-Module -Name winspray
 ```
 
 # Use it 
 
 ## Choose your infra 
 
-Look at `samples/` dir. Choose your infrastrucute or create one. Be sure you have an odd number of etcd servers.
+[Pick one config file](https://github.com/jseguillon/winspray/tree/master/samples) on winspray github repo. You can edit and create your own. 
 
-So far, knwon working vagrant boxes are "generic/centos8", "generic/debian10"  and "generic/ubuntu1910"
+## Create tour cluster 
 
-## New cluster 
-
-Example with cluster described in `samples/minimal`
+In this example, "minimal.yaml" infra is used : 
 
 ```powershell
-New-Winspray-Cluster minimal
+New-Winspray-Cluster .\minimal.yaml
 
 Restore-Winspray-Cluster
 Stop-Winspray-Cluster
@@ -71,10 +69,54 @@ Remove-Winspray-Cluster
 New-Winspray-Cluster minimal
 
 # or New-Winspray-Cluster minimal -Force 
+
 ```
 
-# Other usefull commands 
+## Other usefull commands 
 
 ```powershell
 Get-Help winspray
 ```
+
+# A bit of arhitecture 
+
+## Main flow chart
+
+```
+                                                                                                                                                                 
+   winspray                                                 winspray                                                                                             
+powershell module                    Vagrant             docker container              HyperV                  VMS 
+       |                                |                        |                       |                      |  
+       |---------|                      |                        |                       |                      |  
+       |         |                      |                        |                       |                      |  
+       |         | Prepare things       |                        |                       |                      |  
+       |----------                      |                        |                       |                      |  
+       |                    run playbook "create"                |                       |                      |  
+       --------------------------------------------------------->|                       |                      |  
+       |                                |                        |                       |                      |  
+       |                 Vagrantfile and kubespray inventory     |                       |                      |  
+       |<--------------------------------------------------------|                       |                      |  
+       |        launch vagrant up       |                        |                       |                      |  
+       |------------------------------->|                  create VMs                    |                      |  
+       |                                |----------------------------------------------->|                      |  
+       |                                |                vms created ok                  |(VMs are kwow created)|  
+       |                                |<---------------------------------------------- |                      |  
+       |           ok good to go        |                        |                       |                      |  
+       |<------------------------------ |                        |                       |                      |  
+       |                                |                        |                       |                      |  
+       |                    run playbook "prepare"               |                       |                      |  
+       |-------------------------------------------------------->|                       |                      |  
+       |                                |                        |         prepare netwok                       |  
+       |                                |                        |--------------------------------------------->|  
+       |                                |                        |          network ok   |                      |  
+       |                   good to go   |                        |<-------------------------------------------  |  
+       |<--------------------------------------------------------|                       |                      |  
+       |                                |                        |                       |                      |  
+       |                launch kubespray "cluster" playbook      |                       |                      |  
+       |-------------------------------------------------------->|             do all the kubespray magic       |  
+       |                                |                        |--------------------------------------------->|  
+       |                                |                        |          kubespray install done              |  
+       |     THE END                    |                        |<---------------------------------------------|  
+       |<------------------------------------------------------- |                       |                      |  
+```
+

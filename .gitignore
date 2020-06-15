@@ -7,3 +7,4 @@ kubespray_cache/
 current/
 old-*
 logs
+module/build.secret
