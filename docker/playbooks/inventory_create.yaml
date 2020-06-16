@@ -1,0 +1,32 @@
+---
+- hosts: localhost
+  tasks: 
+  - name: create current directory
+    file:
+      path: /opt/winspray/current/
+      state: directory
+      mode: '0755'
+  - name: render given infra
+    template: src=/opt/winspray/{{ infra }} dest=/opt/winspray/current/infra.yaml.rendered
+    delegate_to: localhost
+  - name: include now rendered infra
+    include_vars: 
+      file: /opt/winspray/current/infra.yaml.rendered
+  - name: create vagrant env
+    template: src=/winspray/playbooks/templates/vagrant.vars.rb.j2 dest=/opt/winspray/current/vagrant.vars.rb
+    delegate_to: localhost
+  - name: create hosts inventory
+    template: src=/winspray/playbooks/templates/hosts.yaml.j2 dest=/opt/winspray/current/hosts.yaml
+    delegate_to: localhost
+  - name: copy vagrant file
+    copy: 
+      src: /winspray/Vagrantfile
+      dest: /opt/winspray/
+  - name: copy default group_vars
+    copy: 
+      src: /kubespray/inventory/sample/group_vars
+      dest: /opt/winspray/current/
+  - name: copy default config
+    copy: 
+      src: /winspray/config
+      dest: /opt/winspray/current/
