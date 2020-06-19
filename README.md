@@ -1,12 +1,19 @@
-# What ? 
+# Winspray
 
-Winspray is set of functions made to ease Kubernetes multi-node and multi OS deployement on Hyperv via Vagrant and Kubespray. 
+# Easy kubernetes on hyperV windows 10 
+
+Winspray is set of functions made to ease Kubernetes install on Hyperv via Vagrant and [kubespray](https://kubespray.io/#/) 
 
 Goal : 
- - run kubespray with no effort on HyperV
- - easy & dynamic config
+ - multi-node 
+ - multi OS
+ - easy config
+ - no effort / repeatable 
 
-So far, known working vagrant boxes are "generic/centos8", "generic/debian10"  and "generic/ubuntu1910"
+Compatible Vagrant boxes :
+ - "generic/centos8"
+ - "generic/debian10"
+ - "generic/ubuntu1910"
 
 # Requirements
 
@@ -63,7 +70,7 @@ Start-Winspray-Cluster
 Remove-Winspray-Cluster
 New-Winspray-Cluster .\mynewcluster.yaml
 
-# or New-Winspray-Cluster minimal -Force 
+# or New-Winspray-Cluster .\mynewcluster.yaml -Force 
 ```
 
 ### Other usefull commands 
