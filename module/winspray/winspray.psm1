@@ -138,7 +138,8 @@ function New-Winspray-Inventory ( ) {
 
     # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example
     # TODO : if existing docker/playbooks => use local
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /winspray/playbooks/inventory_create.yaml -e "infra=$KubernetesInfra"
+    $NoPathInfra = (Get-Item $KubernetesInfra).Name
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it jseguillon/winspray:$script:kubesprayVersion  ansible-playbook $AnsibleDebug --become  --limit=localhost /winspray/playbooks/inventory_create.yaml -e "infra=$NoPathInfra"
     if (!$?) {  throw ( "** ERROR *** Found error while creating inventory" ) }
 
     Write-Host ( "## Winspray - inventory and vagrant config created `n") -ForegroundColor DarkGreen
