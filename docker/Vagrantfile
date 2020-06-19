@@ -25,6 +25,8 @@ echo k8s = no fw unless prod
 systemctl disable firewalld
 
 echo Installing anible required packages 
+# Mitigate https://stackoverflow.com/questions/59993633/yum-dnf-error-failed-to-download-metadata-for-repo
+rm -r /var/cache/dnf || true 
 (yum install -y sshpass) || (apt-get install -y sshpass)
 
 echo Centos 8 tweak - sets a default python for ansible
