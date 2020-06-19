@@ -6,12 +6,14 @@ $script:PSModuleRoot = $script:PSModule.ModuleBase
 $script:kubesprayVersion = "2.13.1"
 
 function Remove-Winspray-Cluster {
-    Write-Host ( "# Winspray - destroying current VMs")
+    Write-Host ( "# Winspray - destroying current cluster")
     
     if ( [System.IO.Directory]::Exists("$pwd\current") ) {
-        Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
-        vagrant destroy -f
-        if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force and deal wit h this
+        if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") ) {
+            Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
+            vagrant destroy -f
+            if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force and deal wit h this
+        }
         $targetDir = "old-{0}" -f (Get-Date -Format "MM-dd-yyyy-HH-mm")
         Write-Verbose( "### Winspray - Moving current to $targetDir" )    
         Get-ChildItem -Path "$pwd/current" -Recurse |  Move-Item -Destination "$targetDir" -Force
