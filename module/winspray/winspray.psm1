@@ -71,7 +71,7 @@ function Prepare-Winspray-Cluster( ) {
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/prepare.yaml " )
     # TODO : if existing docker/playbooks => use local
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook -vvv --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/current/config/kubespray.vars.json'  -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
+    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/current/config/kubespray.vars.json'  -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
     
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
