@@ -8,6 +8,9 @@ Param(
 
 Import-Module PSScriptAnalyzer -Force
 
+$ModuleVersion = git describe 
+(Get-Content -path .\winspray.psd1.tpl -Raw) -replace "MODULE_VERSION", "$ModuleVersion" > .\winspray\winspray.psd1
+
 # $results = Invoke-ScriptAnalyzer -Path .\Winspray.psm1
 # if($results.Length -gt 0) {
 #   Write-Error ($results | format-table | Out-String)

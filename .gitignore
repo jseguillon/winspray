@@ -8,3 +8,4 @@ current/
 old-*
 logs
 module/build.secret
+module/winspray/winspray.psd1
