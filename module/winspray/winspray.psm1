@@ -11,6 +11,7 @@ function Remove-Winspray-Cluster {
     if ( [System.IO.Directory]::Exists("$pwd\current") ) {
         if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") ) {
             Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
+            $env:WINSPRAYROOT=$script:PSModuleRoot
             vagrant destroy -f
             if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force and deal wit h this
         }
