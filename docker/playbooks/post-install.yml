@@ -1,0 +1,34 @@
+- hosts: kube-master[0]
+  tasks:
+  - name: Get credentials
+    fetch:
+      src:  "/root/.kube/config"
+      dest: "/opt/winspray/"
+    tags:
+      - kube_config
+
+  - name: copy to root dir
+    copy:
+      src: /opt/winspray/{{ inventory_hostname }}/root/.kube/config
+      dest: /opt/winspray/current/kube-config
+    delegate_to: localhost
+    tags:
+      - kube_config
+
+  - name: replace with masters FQDN for connection from management interface
+    replace:
+      path: /opt/winspray/current/kube-config
+      regexp: '(\s+)server: .*$'
+      replace: '\1server: https://{{ inventory_hostname }}:6443'
+    delegate_to: localhost
+    tags:
+      - kube_config
+
+  - name: Remove old fetched file
+    file:
+      path: "/opt/winspray/{{ inventory_hostname }}"
+      state: absent
+    delegate_to: localhost
+    tags:
+      - kube_config
+
