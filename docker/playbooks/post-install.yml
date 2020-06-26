@@ -1,3 +1,45 @@
+- hosts: localhost
+  tasks:
+  - name: Check if ssh key exists
+    stat:
+      path: /opt/winspray/current/id_rsa.pub
+    register: ssh_key
+    tags:
+      - ssh
+
+  - name: Create a private ssh key
+    shell:
+      cmd: ssh-keygen -t rsa -b 4096 -C "winspray generated key" -N "" -f /opt/winspray/current/id_rsa
+      warn: false
+    when: ssh_key.stat.exists == False
+    tags:
+      - ssh
+
+- hosts: k8s-cluster:etcd:calico-rr
+  tasks:
+  - name: Create /root/.ssh dir for root user
+    file:
+      path: "/root/.ssh/"
+      state: directory
+      mode: '0600'
+    tags:
+      - ssh
+
+  - name: Create authorized_keys file for root user
+    file:
+      path: "/root/.ssh/authorized_keys"
+      state: touch
+      mode: '0600'
+    tags:
+      - ssh
+
+  - name: Dump pub_key as authorized for root user in mount point
+    blockinfile:
+      block: "{{ lookup('file', '/opt/winspray/current/id_rsa.pub') }}"
+      dest: "/root/.ssh/authorized_keys"
+    tags:
+      - ssh
+
 - hosts: kube-master[0]
   tasks:
   - name: Get credentials
