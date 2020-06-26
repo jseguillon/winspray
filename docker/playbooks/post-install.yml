@@ -32,3 +32,33 @@
     tags:
       - kube_config
 
+  - name: Copy Dashboard Service Account yaml
+    copy:
+      src: /winspray/playbooks/files/dashboard-svc-role.yml
+      dest:  /etc/kubernetes
+    tags:
+      - dashboard
+
+  - name: Create Service account
+    shell:
+      cmd: /usr/local/bin/kubectl apply -f /etc/kubernetes/dashboard-svc-role.yml
+      warn: false
+    tags:
+      - dashboard
+
+  - name: Get token
+    shell:
+      cmd: /usr/local/bin/kubectl -n kube-system describe secret $(/usr/local/bin/kubectl -n kube-system get secret | grep dashboard-admin-user | awk '{print $1}') | grep 'token:' | cut -d ':' -f 2
+      warn: false
+    register: token_dashboard
+    tags:
+      - dashboard
+
+  - name: dump dashboard token in a file
+    lineinfile:
+      line: "{{ token_dashboard.stdout }}"
+      dest: "/opt/winspray/current/dashboard-token"
+      create: yes
+    delegate_to: localhost
+    tags:
+      - dashboard
