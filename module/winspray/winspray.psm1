@@ -85,8 +85,8 @@ function Install-Winspray-Cluster( ) {
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
     # TODO : if existing kubespray => use local
-    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/current/config/kubespray.vars.json' -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
-    
+    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml -e '@/opt/winspray/current/config/kubespray.vars.json' -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json' cluster.yml /winspray/playbooks/post-install.yml"
+
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
 }
@@ -95,11 +95,11 @@ function Do-Winspray-Bash( ) {
     Write-Host ( "" )
     Write-Host ( "** Going to bash. Here are usefull commands : " )
     Write-Host ( "   pip install -r /opt/winspray/kubespray/requirements.txt" )
-    Write-Host ( "   ansible-playbook --network host --become  -i /opt/winspray/current/hosts.yaml cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json'  -e '@/opt/winspray/config/authent.vars.json'" )
+    Write-Host ( "   ansible-playbook --become  -i /opt/winspray/current/hosts.yaml -e '@/opt/winspray/current/config/kubespray.vars.json' -e '@/opt/winspray/current/config/network.vars.json'  -e '@/opt/winspray/current/config/authent.vars.json'  /winspray/playbooks/post-install.yml" )
     Write-Host ( "" )
 
-    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash
-    
+    docker run -it --rm -e KUBECONFIG=/opt/winspray/current/kube-config -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash
+
     if (!$?) { throw "Exiting $?" }
 }
 
