@@ -46,6 +46,7 @@
     tags:
       - dashboard
 
+  # TODO : better get namespace and kubectl location from kubespray config
   - name: Get token
     shell:
       cmd: /usr/local/bin/kubectl -n kube-system describe secret $(/usr/local/bin/kubectl -n kube-system get secret | grep dashboard-admin-user | awk '{print $1}') | grep 'token:' | cut -d ':' -f 2
