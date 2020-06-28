@@ -91,6 +91,31 @@ function Install-Winspray-Cluster( ) {
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
 }
 
+function Start-Winspray-Proxy( ) {
+  [CmdletBinding()]
+  Param(
+      [parameter( ValueFromPipeline)]
+      [string]$ProxyPort = "8082"
+  )
+
+  $PortMap = "0.0.0.0:" + $ProxyPort +":8001"
+
+  if ( (docker ps |Select-String -SimpleMatch "Winspray-proxy" | Measure-Object -Line).Lines -eq 0 ) {
+    docker run --rm -d --name "Winspray-proxy" -p $PortMap -e KUBECONFIG=/opt/winspray/current/kube-config -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion
+  }
+
+  Write-Host (" Dashboard acces : http://localhost:$ProxyPort/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#/login ")
+
+  Write-Host (" Token : " )
+  Get-Content .\current\dashboard-token
+
+  docker exec -d "Winspray-proxy" ssh -o StrictHostKeyChecking=no -4 -L 0.0.0.0:8001:localhost:8001 root@k8s-server-1.mshome.net '(((netstat -neap 2>/dev/null  | grep 127.0.0.1:8001  >/dev/null) && echo "proxy already running" && sleep 3600) || sudo /usr/local/bin/kubectl proxy)&'
+}
+
+function Stop-Winspray-Proxy( ) {
+  docker stop Winspray-proxy
+}
+
 function Do-Winspray-Bash( ) {
     Write-Host ( "" )
     Write-Host ( "** Going to bash. Here are usefull commands : " )
@@ -223,4 +248,4 @@ function New-Winspray-Cluster () {
     Write-Host ("# Winspray - Time to start  {0}h {1}m {2}s" -f  ($timeExec.Hours, $timeExec.Minutes, $timeExec.Seconds ))
 }
 
-Export-ModuleMember -Function Set-Winspray-Config, New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, New-Winspray-Inventory, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime, Do-Winspray-Bash
+Export-ModuleMember -Function Start-Winspray-Proxy, Stop-Winspray-Proxy, Set-Winspray-Config, New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, New-Winspray-Inventory, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime, Do-Winspray-Bash
