@@ -3,11 +3,11 @@
 
 $script:PSModule = $ExecutionContext.SessionState.Module
 $script:PSModuleRoot = $script:PSModule.ModuleBase
-$script:kubesprayVersion = "2.13.1"
+$script:kubesprayVersion = "2.13.2"
 
 function Remove-Winspray-Cluster {
     Write-Host ( "# Winspray - destroying current cluster")
-    
+
     if ( [System.IO.Directory]::Exists("$pwd\current") ) {
         if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") ) {
             Write-Verbose ( "### Winspray - launching vagrant destroy -f" )
@@ -16,12 +16,12 @@ function Remove-Winspray-Cluster {
             if (!$?) { throw ("Exiting $?") } # FIXME should exit and say use -Force and deal wit h this
         }
         $targetDir = "old-{0}" -f (Get-Date -Format "MM-dd-yyyy-HH-mm")
-        Write-Verbose( "### Winspray - Moving current to $targetDir" )    
+        Write-Verbose( "### Winspray - Moving current to $targetDir" )
         Get-ChildItem -Path "$pwd/current" -Recurse |  Move-Item -Destination "$targetDir" -Force
         Write-Host ( "## Winspray - destroy done `n" ) -ForegroundColor DarkGreen
     }
-    else { 
-        Write-Host ( "## Winspray - nothing to destroy done. Remove VMs manually if needed `n" ) 
+    else {
+        Write-Host ( "## Winspray - nothing to destroy done. Remove VMs manually if needed `n" )
     }
 }
 
@@ -33,7 +33,7 @@ function Backup-Winspray-Cluster {
     )
     Write-Host ("# Winspray - start backup with name '$BackupName'" )
     Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Checkpoint-VM -Name $_.Name -SnapshotName "$BackupName"}
-    
+
     if (!$?) { exit -1 }
     Write-Host ( "## Winspray - backup '$BackupName' ok `n") -ForegroundColor DarkGreen
 }
@@ -46,15 +46,15 @@ function Restore-Winspray-Cluster{
     )
     Write-Host ("# Winspray - start restore  with name '$BackupName'" )
     Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Restore-VMSnapshot -Confirm:$false -Name "$BackupName" -VMName $_.Name }
-    
+
     if (!$?) { exit -1 }
     Write-Host ( "## Winspray - restore '$BackupName' ok `n") -ForegroundColor DarkGreen
 }
 
 function Start-Winspray-Cluster {
-    Write-Host ("# Winspray - start existing VMS" )    
+    Write-Host ("# Winspray - start existing VMS" )
     Get-VM | Where-Object {$_.Name -like 'k8s-*' -and $_.State -ne "Running" } | ForEach-Object -Process { Start-VM $_.Name }
-    
+
     Write-Host ( "## Winspray - VMS started ok  `n")  -ForegroundColor DarkGreen
 }
 
@@ -67,20 +67,20 @@ function Stop-Winspray-Cluster {
 
 function Prepare-Winspray-Cluster( ) {
     #FIXME : how to good inject Debug flag (from this direct cal plus from New-Winspray-Cluster)
-    $AnsibleDebug = If ( $Debug ) {"-vvv"} Else {""} 
+    $AnsibleDebug = If ( $Debug ) {"-vvv"} Else {""}
 
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/prepare.yaml " )
     # TODO : if existing docker/playbooks => use local
     docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -e ANSIBLE_CONFIG=/winspray/ansible.cfg -v ${PWD}:/opt/winspray -t jseguillon/winspray:$script:kubesprayVersion bash -c "ansible-playbook $AnsibleDebug --become  -i /opt/winspray/current/hosts.yaml /winspray/playbooks/prepare.yaml -e '@/opt/winspray/current/config/kubespray.vars.json'  -e '@/opt/winspray/current/config/network.vars.json' -e '@/opt/winspray/current/config/authent.vars.json'"
-    
+
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
 }
 
 function Install-Winspray-Cluster( ) {
     #FIXME : how to good inject Debug flag (from this direct cal plus from New-Winspray-Cluster)
-    $AnsibleDebug = If ( $Debug ) {"-vvv"} Else {""} 
+    $AnsibleDebug = If ( $Debug ) {"-vvv"} Else {""}
 
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
@@ -197,7 +197,7 @@ function New-Winspray-Cluster () {
         }
         else {
             Write-Host ( "Found existing cluster. Maybe you wanted to Start-Winspray-Cluster ?" )
-            throw  "Please remove exiting cluster first or use -Force flag or start existing cluster " 
+            throw  "Please remove exiting cluster first or use -Force flag or start existing cluster "
         }
     }
 
@@ -207,8 +207,8 @@ function New-Winspray-Cluster () {
 
         Write-Host ("# Winspray - create new VMs" )
         Write-Verbose ( "### Winspray - launching vagrant up" )
-        
-        # Export root module path so vagrant can call script 
+
+        # Export root module path so vagrant can call script
         $env:WINSPRAYROOT=$script:PSModuleRoot
 
         vagrant up
@@ -223,7 +223,7 @@ function New-Winspray-Cluster () {
 
     #cluster not yet prepared ? run prepare playbook
     if ( ! [System.IO.File]::Exists("$pwd\current\prepared.ok") ) {
-        Prepare-Winspray-Cluster 
+        Prepare-Winspray-Cluster
         echo "ok" > $pwd\current\prepared.ok
 
         Backup-Winspray-Cluster ("prepared")
@@ -234,7 +234,7 @@ function New-Winspray-Cluster () {
 
     # kubernetes not installed ? run cluster playbook
     if ( ! [System.IO.File]::Exists("$pwd\current\installed.ok") ) {
-        Install-Winspray-Cluster 
+        Install-Winspray-Cluster
         echo "ok" > $pwd\current\installed.ok
 
         Backup-Winspray-Cluster ("installed")
