@@ -8,8 +8,12 @@ Param(
 
 Import-Module PSScriptAnalyzer -Force
 
-$ModuleVersion = git describe 
-(Get-Content -path .\winspray.psd1.tpl -Raw) -replace "MODULE_VERSION", "$ModuleVersion" > .\winspray\winspray.psd1
+$Tag = git describe
+$ModuleVersion = $Tag.Split("-")[0]
+$PreRelease = $Tag.Split("-")[1]
+$ReleaseNote = git tag -l --format='%(contents)' $Tag
+$ReleaseNoteAsString = $ReleaseNote -join "`r`n"
+(Get-Content -path .\winspray.psd1.tpl -Raw).Replace("MODULE_VERSION", "$ModuleVersion").Replace("MODULE_PRE_RELEASE", "$PreRelease").Replace("MODULE_RELEASE_NOTE", "$ReleaseNoteAsString") > .\winspray\winspray.psd1
 
 # $results = Invoke-ScriptAnalyzer -Path .\Winspray.psm1
 # if($results.Length -gt 0) {
