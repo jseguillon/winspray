@@ -1,4 +1,4 @@
-FROM  quay.io/kubespray/kubespray:v2.13.1
+FROM  quay.io/kubespray/kubespray:v2.13.2
 RUN mkdir -p /winspray/playbooks && mkdir -p /winspray/config
 COPY playbooks /winspray/playbooks/
 COPY config /winspray/config
